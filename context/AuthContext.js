@@ -1,49 +1,45 @@
 "use client";
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 import { useRouter } from "next/navigation";
-import { USERS } from "@/lib/data"; 
+import { USERS } from "@/lib/data";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Check session on load
-  useEffect(() => {
+  // Init user from sessionStorage
+  const [user, setUser] = useState(() => {
+    if (typeof window === "undefined") return null;
     const storedUser = sessionStorage.getItem("edunexus_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
-  }, []);
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
+
+  // ❌ NO useEffect needed
+  const [loading] = useState(false);
 
   const login = (email, password) => {
     let foundUser = null;
-    
-    // ✅ Check against all roles (Parent added here)
+
     if (email === USERS.admin.email && password === "123") foundUser = USERS.admin;
     else if (email === USERS.teacher.email && password === "123") foundUser = USERS.teacher;
     else if (email === USERS.student.email && password === "123") foundUser = USERS.student;
-    else if (email === USERS.parent.email && password === "123") foundUser = USERS.parent; // 👈 YEH MISSING THA
+    else if (email === USERS.parent.email && password === "123") foundUser = USERS.parent;
 
     if (foundUser) {
       setUser(foundUser);
       sessionStorage.setItem("edunexus_user", JSON.stringify(foundUser));
-      
-      // Redirect based on role
       router.push(`/dashboard/${foundUser.role}`);
       return { success: true };
-    } else {
-      return { success: false, message: "Invalid credentials. Try demo accounts." };
     }
+
+    return { success: false, message: "Invalid credentials" };
   };
 
   const logout = () => {
     setUser(null);
     sessionStorage.removeItem("edunexus_user");
-    router.push("/login"); // Redirect to login
+    router.push("/login");
   };
 
   return (
